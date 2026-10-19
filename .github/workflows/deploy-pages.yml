@@ -1,0 +1,38 @@
+name: Publish playable game
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download playable web build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release download --pattern midnight-takeout-web.zip --dir /tmp/game
+          mkdir -p site
+          unzip -q /tmp/game/midnight-takeout-web.zip -d site
+          test -s site/index.html
+          test -s site/index.wasm
+          test -s site/index.pck
+          touch site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - name: Publish game
+        id: deployment
+        uses: actions/deploy-pages@v4
